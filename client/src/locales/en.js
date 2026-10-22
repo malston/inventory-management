@@ -109,6 +109,7 @@ export default {
     allOrders: 'All Orders',
     submittedOrders: 'Submitted Orders',
     noSubmittedOrders: 'No restock orders have been submitted yet',
+    submittedLoadError: 'Failed to load submitted orders',
     submittedTable: {
       submittedDate: 'Submitted',
       itemCount: 'Items',

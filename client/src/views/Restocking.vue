@@ -54,6 +54,7 @@
           </button>
         </div>
 
+        <div v-if="refreshError" class="error">{{ refreshError }}</div>
         <div v-if="submitError" class="error">{{ submitError }}</div>
         <div v-if="placedOrder" class="confirmation">
           {{ t('restocking.orderPlaced', {
@@ -104,6 +105,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { api } from '../api'
 import { useI18n } from '../composables/useI18n'
 import { parseDate } from '../utils/date'
+import { formatCurrencyWithDecimals } from '../utils/currency'
 
 const BUDGET_STEP = 500
 const INITIAL_BUDGET = 1000
@@ -114,12 +116,9 @@ export default {
   setup() {
     const { t, currentCurrency, currentLocale, translateProductName } = useI18n()
 
-    const currencySymbol = computed(() => {
-      return currentCurrency.value === 'JPY' ? '¥' : '$'
-    })
-
     const loading = ref(true)
     const error = ref(null)
+    const refreshError = ref(null)
     const budget = ref(INITIAL_BUDGET)
     const fullRestockCost = ref(0)
     const recommendation = ref({ budget: 0, items: [], total_cost: 0, remaining_budget: 0 })
@@ -137,10 +136,7 @@ export default {
     })
 
     const formatCurrency = (value) => {
-      return `${currencySymbol.value}${Number(value).toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      })}`
+      return formatCurrencyWithDecimals(Number(value), currentCurrency.value, 2)
     }
 
     const formatDate = (dateString) => {
@@ -153,7 +149,7 @@ export default {
     // Only the most recent request may update the table; earlier responses that
     // arrive late are discarded.
     let latestRequest = 0
-    const loadRecommendation = async () => {
+    const loadRecommendation = async ({ initial = false } = {}) => {
       const requestId = ++latestRequest
       refreshing.value = true
       try {
@@ -161,10 +157,15 @@ export default {
         if (requestId !== latestRequest) return
         recommendation.value = result
         fullRestockCost.value = result.full_restock_cost
-        error.value = null
+        refreshError.value = null
       } catch (err) {
         if (requestId !== latestRequest) return
-        error.value = t('restocking.loadError') + ': ' + err.message
+        const message = t('restocking.loadError') + ': ' + err.message
+        if (initial) {
+          error.value = message
+        } else {
+          refreshError.value = message
+        }
       } finally {
         if (requestId === latestRequest) refreshing.value = false
       }
@@ -192,7 +193,7 @@ export default {
     }
 
     onMounted(async () => {
-      await loadRecommendation()
+      await loadRecommendation({ initial: true })
       loading.value = false
       // Slider range is known only after the first response; keep the starting
       // budget inside it.
@@ -208,6 +209,7 @@ export default {
       BUDGET_STEP,
       loading,
       error,
+      refreshError,
       budget,
       fullRestockCost,
       sliderMax,

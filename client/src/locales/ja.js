@@ -109,6 +109,7 @@ export default {
     allOrders: 'すべての注文',
     submittedOrders: '発注済み補充注文',
     noSubmittedOrders: '補充注文はまだ発注されていません',
+    submittedLoadError: '発注済み注文の読み込みに失敗しました',
     submittedTable: {
       submittedDate: '発注日',
       itemCount: '品目数',

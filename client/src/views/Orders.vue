@@ -79,7 +79,8 @@
         <div class="card-header">
           <h3 class="card-title">{{ t('orders.submittedOrders') }} ({{ restockOrders.length }})</h3>
         </div>
-        <div v-if="restockOrders.length === 0" class="empty-state">
+        <div v-if="restockError" class="error">{{ restockError }}</div>
+        <div v-else-if="restockOrders.length === 0" class="empty-state">
           {{ t('orders.noSubmittedOrders') }}
         </div>
         <div v-else class="table-container">
@@ -134,6 +135,7 @@ export default {
     const error = ref(null)
     const orders = ref([])
     const restockOrders = ref([])
+    const restockError = ref(null)
 
     // Use shared filters
     const {
@@ -165,8 +167,10 @@ export default {
 
     const loadRestockOrders = async () => {
       try {
+        restockError.value = null
         restockOrders.value = await api.getRestockOrders()
       } catch (err) {
+        restockError.value = t('orders.submittedLoadError')
         console.error('Failed to load restock orders:', err)
       }
     }
@@ -211,6 +215,7 @@ export default {
       error,
       orders,
       restockOrders,
+      restockError,
       getOrdersByStatus,
       getOrderStatusClass,
       formatDate,
