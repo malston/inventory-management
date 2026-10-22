@@ -197,7 +197,7 @@ export default {
       loading.value = false
       // Slider range is known only after the first response; keep the starting
       // budget inside it.
-      if (budget.value > sliderMax.value) {
+      if (!error.value && budget.value > sliderMax.value) {
         budget.value = sliderMax.value
       }
     })

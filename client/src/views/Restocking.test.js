@@ -168,6 +168,31 @@ describe('Restocking view', () => {
     expect(wrapper.find('input[type="range"]').exists()).toBe(false)
   })
 
+  it('leaves the budget alone after a failed first load', async () => {
+    api.getRestockRecommendations.mockRejectedValueOnce(
+      new Error('Network Error')
+    )
+    await mountView()
+
+    vi.advanceTimersByTime(250)
+    await flushPromises()
+    expect(api.getRestockRecommendations).toHaveBeenCalledTimes(1)
+  })
+
+  it('lowers the starting budget to the slider max when restocking costs less', async () => {
+    api.getRestockRecommendations.mockResolvedValue({
+      ...recommendation(1000, [FLT], 400),
+      full_restock_cost: 400
+    })
+    const wrapper = await mountView()
+
+    expect(wrapper.find('input[type="range"]').attributes('max')).toBe('500')
+    expect(wrapper.find('.budget-value').text()).toBe('$500.00')
+    vi.advanceTimersByTime(250)
+    await flushPromises()
+    expect(api.getRestockRecommendations).toHaveBeenLastCalledWith(500)
+  })
+
   it('keeps the slider usable after a failed refresh and clears the error on the next success', async () => {
     const wrapper = await mountView()
     api.getRestockRecommendations.mockRejectedValueOnce(
