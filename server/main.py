@@ -1,6 +1,10 @@
+import math
 from datetime import date, timedelta
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from typing import List, Optional
 from pydantic import BaseModel, Field
 from mock_data import inventory_items, orders, demand_forecasts, backlog_items, spending_summary, monthly_spending, category_spending, recent_transactions, purchase_orders
@@ -49,6 +53,24 @@ def apply_filters(items: list, warehouse: Optional[str] = None, category: Option
 
 # Restock orders submitted from the Restocking tab, kept in memory
 restock_orders = []
+
+def stringify_non_finite(value):
+    """Replace inf/nan floats with strings so they can be written as JSON."""
+    if isinstance(value, float) and not math.isfinite(value):
+        return str(value)
+    if isinstance(value, dict):
+        return {key: stringify_non_finite(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [stringify_non_finite(item) for item in value]
+    return value
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Return 422 validation errors, including ones whose rejected input is inf or nan"""
+    return JSONResponse(
+        status_code=422,
+        content={"detail": stringify_non_finite(jsonable_encoder(exc.errors()))},
+    )
 
 # CORS middleware
 app.add_middleware(
@@ -123,7 +145,7 @@ class RestockOrder(BaseModel):
     expected_delivery_date: str
 
 class CreateRestockOrderRequest(BaseModel):
-    budget: float = Field(ge=0)
+    budget: float = Field(ge=0, allow_inf_nan=False)
 
 class BacklogItem(BaseModel):
     id: str
@@ -252,7 +274,7 @@ def recommend_restock(budget):
     }
 
 @app.get("/api/restock/recommendations", response_model=RestockRecommendation)
-def get_restock_recommendations(budget: float = Query(..., ge=0)):
+def get_restock_recommendations(budget: float = Query(..., ge=0, allow_inf_nan=False)):
     """Recommend demand-forecast items to restock within a budget"""
     return recommend_restock(budget)
 

@@ -135,9 +135,32 @@ class TestRestockRecommendations:
         ]
         assert abs(data["remaining_budget"] - 10.00) < 0.01
 
+    def test_stops_when_next_item_gets_zero_units(self, client):
+        """Test the list ends at an unaffordable item even if a cheaper one would fit."""
+        # 970 leaves $10 after FLT-405: no WDG-001 at $12.50, though GSK-203 at $8.75 would fit.
+        response = client.get("/api/restock/recommendations?budget=970")
+        data = response.json()
+
+        assert [(i["item_sku"], i["quantity"]) for i in data["items"]] == [("FLT-405", 150)]
+        assert abs(data["remaining_budget"] - 10.00) < 0.01
+
+    def test_budget_below_first_item_cost_recommends_nothing(self, client):
+        """Test a budget too small for one unit of the top item skips nothing ahead."""
+        response = client.get("/api/restock/recommendations?budget=5")
+        data = response.json()
+
+        assert data["items"] == []
+        assert abs(data["remaining_budget"] - 5.00) < 0.01
+
     def test_negative_budget_rejected(self, client):
         """Test a negative budget is a validation error."""
         response = client.get("/api/restock/recommendations?budget=-1")
+        assert response.status_code == 422
+
+    @pytest.mark.parametrize("budget", ["inf", "nan"])
+    def test_non_finite_budget_rejected(self, client, budget):
+        """Test infinite or NaN budgets are validation errors."""
+        response = client.get(f"/api/restock/recommendations?budget={budget}")
         assert response.status_code == 422
 
     def test_missing_budget_rejected(self, client):
@@ -205,6 +228,18 @@ class TestRestockOrders:
         """Test a negative budget is a validation error on submit."""
         response = client.post("/api/restock/orders", json={"budget": -5})
         assert response.status_code == 422
+
+    def test_place_order_infinite_budget_rejected(self, client):
+        """Test an infinite budget is a validation error on submit."""
+        response = client.post(
+            "/api/restock/orders",
+            content='{"budget": Infinity}',
+            headers={"Content-Type": "application/json"},
+        )
+        assert response.status_code == 422
+        error = response.json()["detail"][0]
+        assert error["loc"] == ["body", "budget"]
+        assert error["input"] == "inf"
 
     def test_restock_orders_do_not_change_customer_orders(self, client):
         """Test restock orders stay out of the customer orders list."""
