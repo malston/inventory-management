@@ -126,13 +126,14 @@ import { parseDate } from '../utils/date'
 export default {
   name: 'Orders',
   setup() {
-    const { t, currentCurrency, translateProductName, translateCustomerName } = useI18n()
+    const { t, currentCurrency, currentLocale, translateProductName, translateCustomerName } = useI18n()
 
     const currencySymbol = computed(() => {
       return currentCurrency.value === 'JPY' ? '¥' : '$'
     })
     const formatMoney = (amount) => {
-      return `${currencySymbol.value}${Number(amount).toLocaleString(undefined, {
+      const locale = currentLocale.value === 'ja' ? 'ja-JP' : 'en-US'
+      return `${currencySymbol.value}${Number(amount).toLocaleString(locale, {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
       })}`
