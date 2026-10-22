@@ -477,6 +477,7 @@ src/
 
 **Start dev server:** `npm run dev`
 **Build for production:** `npm run build`
+**Run tests:** `npm test` (Vitest + Vue Test Utils, jsdom; tests live next to the code as `*.test.js`)
 **Component structure:** Template → Script (Composition API) → Scoped Styles
 **Data loading:** loading state → try/catch → finally
 **Filters:** Composable → refs → watch for changes
