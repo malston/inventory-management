@@ -1,7 +1,13 @@
-from fastapi import FastAPI, HTTPException
+import math
+from datetime import date, timedelta
+from itertools import count
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List, Optional
-from pydantic import BaseModel
+from fastapi.responses import JSONResponse
+from typing import Annotated, List, Literal, Optional
+from pydantic import BaseModel, Field, StringConstraints
 from mock_data import inventory_items, orders, demand_forecasts, backlog_items, spending_summary, monthly_spending, category_spending, recent_transactions, purchase_orders
 
 app = FastAPI(title="Factory Inventory Management System")
@@ -46,6 +52,31 @@ def apply_filters(items: list, warehouse: Optional[str] = None, category: Option
 
     return filtered
 
+# Tasks created from the Tasks modal, kept in memory, newest first
+tasks = []
+task_ids = count(1)
+
+# Restock orders submitted from the Restocking tab, kept in memory
+restock_orders = []
+
+def stringify_non_finite(value):
+    """Replace inf/nan floats with strings so they can be written as JSON."""
+    if isinstance(value, float) and not math.isfinite(value):
+        return str(value)
+    if isinstance(value, dict):
+        return {key: stringify_non_finite(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [stringify_non_finite(item) for item in value]
+    return value
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Return 422 validation errors, including ones whose rejected input is inf or nan"""
+    return JSONResponse(
+        status_code=422,
+        content={"detail": stringify_non_finite(jsonable_encoder(exc.errors()))},
+    )
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -89,6 +120,37 @@ class DemandForecast(BaseModel):
     forecasted_demand: int
     trend: str
     period: str
+    unit_cost: float
+    lead_time_days: int
+
+class RestockItem(BaseModel):
+    item_sku: str
+    item_name: str
+    trend: str
+    quantity: int
+    unit_cost: float
+    line_total: float
+    lead_time_days: int
+
+class RestockRecommendation(BaseModel):
+    budget: float
+    items: List[RestockItem]
+    total_cost: float
+    remaining_budget: float
+    full_restock_cost: float
+
+class RestockOrder(BaseModel):
+    id: str
+    order_number: str
+    status: str
+    created_date: str
+    items: List[RestockItem]
+    total_cost: float
+    lead_time_days: int
+    expected_delivery_date: str
+
+class CreateRestockOrderRequest(BaseModel):
+    budget: float = Field(ge=0, allow_inf_nan=False)
 
 class BacklogItem(BaseModel):
     id: str
@@ -119,6 +181,18 @@ class CreatePurchaseOrderRequest(BaseModel):
     unit_cost: float
     expected_delivery_date: str
     notes: Optional[str] = None
+
+class Task(BaseModel):
+    id: str
+    title: str
+    priority: str
+    dueDate: date
+    status: str
+
+class CreateTaskRequest(BaseModel):
+    title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    priority: Literal["high", "medium", "low"]
+    dueDate: date
 
 # API endpoints
 @app.get("/")
@@ -165,6 +239,127 @@ def get_order(order_id: str):
 def get_demand_forecasts():
     """Get demand forecasts"""
     return demand_forecasts
+
+def find_task(task_id):
+    task = next((t for t in tasks if t["id"] == task_id), None)
+    if not task:
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+    return task
+
+@app.get("/api/tasks", response_model=List[Task])
+def get_tasks():
+    """Get tasks, newest first"""
+    return tasks
+
+@app.post("/api/tasks", response_model=Task, status_code=201)
+def create_task(request: CreateTaskRequest):
+    """Create a pending task"""
+    task = {
+        "id": f"task-{next(task_ids)}",
+        "title": request.title,
+        "priority": request.priority,
+        "dueDate": request.dueDate,
+        "status": "pending",
+    }
+    tasks.insert(0, task)
+    return task
+
+@app.patch("/api/tasks/{task_id}", response_model=Task)
+def toggle_task(task_id: str):
+    """Switch a task between pending and completed"""
+    task = find_task(task_id)
+    task["status"] = "completed" if task["status"] == "pending" else "pending"
+    return task
+
+@app.delete("/api/tasks/{task_id}", response_model=Task)
+def delete_task(task_id: str):
+    """Delete a task"""
+    task = find_task(task_id)
+    tasks.remove(task)
+    return task
+
+def to_cents(amount):
+    return int(round(amount * 100))
+
+def recommend_restock(budget):
+    """Fill demand gaps in priority order until the budget runs out.
+
+    Increasing-trend items come first, then larger gaps. The first item the
+    budget cannot fully cover gets a partial quantity and ends the list.
+    Money is computed in cents so exact budgets don't lose a unit to float error.
+    """
+    candidates = []
+    for forecast in demand_forecasts:
+        gap = forecast["forecasted_demand"] - forecast["current_demand"]
+        if gap > 0:
+            candidates.append((forecast, gap))
+    candidates.sort(key=lambda c: (c[0]["trend"] != "increasing", -c[1], c[0]["item_sku"]))
+
+    remaining = to_cents(budget)
+    full_restock_cents = 0
+    items = []
+    filled = True
+    for forecast, gap in candidates:
+        cost_cents = to_cents(forecast["unit_cost"])
+        full_restock_cents += gap * cost_cents
+        if not filled:
+            continue
+        quantity = min(gap, remaining // cost_cents)
+        if quantity < gap:
+            filled = False
+        if quantity == 0:
+            continue
+        remaining -= quantity * cost_cents
+        items.append({
+            "item_sku": forecast["item_sku"],
+            "item_name": forecast["item_name"],
+            "trend": forecast["trend"],
+            "quantity": quantity,
+            "unit_cost": forecast["unit_cost"],
+            "line_total": quantity * cost_cents / 100,
+            "lead_time_days": forecast["lead_time_days"],
+        })
+
+    return {
+        "budget": budget,
+        "items": items,
+        "total_cost": (to_cents(budget) - remaining) / 100,
+        "remaining_budget": remaining / 100,
+        "full_restock_cost": full_restock_cents / 100,
+    }
+
+@app.get("/api/restock/recommendations", response_model=RestockRecommendation)
+def get_restock_recommendations(budget: float = Query(..., ge=0, allow_inf_nan=False)):
+    """Recommend demand-forecast items to restock within a budget"""
+    return recommend_restock(budget)
+
+@app.get("/api/restock/orders", response_model=List[RestockOrder])
+def get_restock_orders():
+    """Get submitted restock orders"""
+    return restock_orders
+
+@app.post("/api/restock/orders", response_model=RestockOrder, status_code=201)
+def create_restock_order(request: CreateRestockOrderRequest):
+    """Submit the recommended restock for a budget as an order"""
+    recommendation = recommend_restock(request.budget)
+    if not recommendation["items"]:
+        raise HTTPException(status_code=400, detail="No items fit within the budget")
+
+    created = date.today()
+    lead_time_days = max(item["lead_time_days"] for item in recommendation["items"])
+    number = len(restock_orders) + 1
+    order = {
+        "id": f"restock-{number}",
+        "order_number": f"RST-{number:04d}",
+        "status": "Submitted",
+        "created_date": created.isoformat(),
+        "items": recommendation["items"],
+        "total_cost": recommendation["total_cost"],
+        "lead_time_days": lead_time_days,
+        "expected_delivery_date": (created + timedelta(days=lead_time_days)).isoformat(),
+    }
+    restock_orders.append(order)
+    return order
 
 @app.get("/api/backlog", response_model=List[BacklogItem])
 def get_backlog():
