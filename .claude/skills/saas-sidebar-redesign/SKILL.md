@@ -1,6 +1,6 @@
 ---
 name: saas-sidebar-redesign
-description: Redesigns a Vue 3 app's shell into a modern SaaS-style layout -- a vertical navigation sidebar on the left in place of a top nav bar, a slim top bar for filters and account controls, one spacing scale, and polished global styles driven by CSS custom properties. Use this skill whenever someone wants a Vue app to look more modern, professional, or "like a real SaaS product", asks to move navigation into a sidebar or side nav, says the top nav or header looks dated or cluttered, or asks for consistent spacing and a cleaner overall look -- even if they never say the word "sidebar".
+description: Redesigns a Vue 3 app's shell into a modern SaaS-style layout -- a vertical navigation sidebar on the left in place of a top nav bar, a slim top bar for filters and account controls, one spacing scale, and polished global styles driven by CSS custom properties. Use this skill when someone wants the whole Vue app's layout redesigned: moving navigation into a sidebar or side nav, making the app as a whole look modern, professional or "like a real SaaS product", or replacing a top nav or header that looks dated or cluttered. It applies even if they never say the word "sidebar". Do not use it for narrow styling fixes to one view, table, card or component (for example "the spacing on the Orders table feels off" or "make this button blue"). Those need a targeted edit, not a new shell.
 ---
 
 # SaaS Sidebar Redesign
