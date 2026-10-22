@@ -54,6 +54,7 @@ npm install && npm run dev
 - `GET /api/dashboard/summary` - All filters
 - `GET /api/demand`, `/api/backlog` - No filters
 - `GET /api/spending/*` - Summary, monthly, categories, transactions
+- `GET/POST /api/tasks`, `PATCH/DELETE /api/tasks/{id}` - Tasks modal (in memory; PATCH toggles pending/completed)
 
 ## Common Issues
 1. Use unique keys in v-for (not `index`) - use `sku`, `month`, etc.

@@ -1,7 +1,9 @@
+from datetime import date
+from itertools import count
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List, Optional
-from pydantic import BaseModel
+from typing import Annotated, List, Literal, Optional
+from pydantic import BaseModel, StringConstraints
 from mock_data import inventory_items, orders, demand_forecasts, backlog_items, spending_summary, monthly_spending, category_spending, recent_transactions, purchase_orders
 
 app = FastAPI(title="Factory Inventory Management System")
@@ -45,6 +47,10 @@ def apply_filters(items: list, warehouse: Optional[str] = None, category: Option
         filtered = [item for item in filtered if item.get('status', '').lower() == status.lower()]
 
     return filtered
+
+# Tasks created from the Tasks modal, kept in memory, newest first
+tasks = []
+task_ids = count(1)
 
 # CORS middleware
 app.add_middleware(
@@ -120,6 +126,18 @@ class CreatePurchaseOrderRequest(BaseModel):
     expected_delivery_date: str
     notes: Optional[str] = None
 
+class Task(BaseModel):
+    id: str
+    title: str
+    priority: str
+    dueDate: date
+    status: str
+
+class CreateTaskRequest(BaseModel):
+    title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    priority: Literal["high", "medium", "low"]
+    dueDate: date
+
 # API endpoints
 @app.get("/")
 def root():
@@ -165,6 +183,44 @@ def get_order(order_id: str):
 def get_demand_forecasts():
     """Get demand forecasts"""
     return demand_forecasts
+
+def find_task(task_id):
+    task = next((t for t in tasks if t["id"] == task_id), None)
+    if not task:
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+    return task
+
+@app.get("/api/tasks", response_model=List[Task])
+def get_tasks():
+    """Get tasks, newest first"""
+    return tasks
+
+@app.post("/api/tasks", response_model=Task, status_code=201)
+def create_task(request: CreateTaskRequest):
+    """Create a pending task"""
+    task = {
+        "id": f"task-{next(task_ids)}",
+        "title": request.title,
+        "priority": request.priority,
+        "dueDate": request.dueDate,
+        "status": "pending",
+    }
+    tasks.insert(0, task)
+    return task
+
+@app.patch("/api/tasks/{task_id}", response_model=Task)
+def toggle_task(task_id: str):
+    """Switch a task between pending and completed"""
+    task = find_task(task_id)
+    task["status"] = "completed" if task["status"] == "pending" else "pending"
+    return task
+
+@app.delete("/api/tasks/{task_id}", response_model=Task)
+def delete_task(task_id: str):
+    """Delete a task"""
+    task = find_task(task_id)
+    tasks.remove(task)
+    return task
 
 @app.get("/api/backlog", response_model=List[BacklogItem])
 def get_backlog():
