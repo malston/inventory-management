@@ -59,6 +59,7 @@ npm install && npm run dev
 - `GET /api/dashboard/summary` - All filters
 - `GET /api/demand`, `/api/backlog` - No filters
 - `GET /api/spending/*` - Summary, monthly, categories, transactions
+- `GET/POST /api/tasks`, `PATCH/DELETE /api/tasks/{id}` - Tasks modal (in memory; PATCH toggles pending/completed)
 - `GET /api/restock/recommendations?budget=N` - Demand-gap items that fit the budget
 - `GET /api/restock/orders`, `POST /api/restock/orders` - Submitted restock orders (in memory, separate from customer orders)
 
