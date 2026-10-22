@@ -4,6 +4,7 @@ export default {
     overview: 'Overview',
     inventory: 'Inventory',
     orders: 'Orders',
+    restocking: 'Restocking',
     finance: 'Finance',
     demandForecast: 'Demand Forecast',
     companyName: 'Catalyst Components',
@@ -106,6 +107,14 @@ export default {
     title: 'Orders',
     description: 'View and manage customer orders',
     allOrders: 'All Orders',
+    submittedOrders: 'Submitted Orders',
+    noSubmittedOrders: 'No restock orders have been submitted yet',
+    submittedTable: {
+      submittedDate: 'Submitted',
+      itemCount: 'Items',
+      totalCost: 'Total Cost',
+      leadTime: 'Lead Time (days)'
+    },
     totalOrders: 'Total Orders',
     totalRevenue: 'Total Revenue',
     avgOrderValue: 'Avg Order Value',
@@ -126,6 +135,34 @@ export default {
       status: 'Status',
       expectedDelivery: 'Expected Delivery',
       actualDelivery: 'Actual Delivery'
+    }
+  },
+
+  // Restocking
+  restocking: {
+    title: 'Restocking',
+    description: 'Choose a budget to see which items to restock and place a restock order',
+    budget: 'Budget',
+    recommendations: 'Recommended Items',
+    totalCost: 'Total Cost',
+    remainingBudget: 'Remaining Budget',
+    itemCount: 'Items',
+    fullRestockCost: 'Full restock cost: {amount}',
+    empty: 'No items fit within this budget. Increase the budget to see recommendations.',
+    placeOrder: 'Place Order',
+    placingOrder: 'Placing order...',
+    orderPlaced: 'Order {orderNumber} placed. Expected delivery: {date}.',
+    viewOrders: 'View in Orders',
+    loadError: 'Failed to load recommendations',
+    orderError: 'Failed to place order',
+    table: {
+      sku: 'SKU',
+      name: 'Item',
+      trend: 'Trend',
+      quantity: 'Quantity',
+      unitCost: 'Unit Cost',
+      lineTotal: 'Line Total',
+      leadTime: 'Lead Time (days)'
     }
   },
 
@@ -200,6 +237,7 @@ export default {
 
   // Statuses
   status: {
+    submitted: 'Submitted',
     delivered: 'Delivered',
     shipped: 'Shipped',
     processing: 'Processing',
