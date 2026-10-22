@@ -22,9 +22,7 @@ Use the Task tool with these specialized subagents for appropriate tasks:
 - **backend-api-test** skill: Use when writing or modifying tests in `tests/backend` directory with pytest and FastAPI TestClient
 
 ### MCP Tools
-
-- **ALWAYS use GitHub MCP tools** (`mcp__github__*`) for ALL GitHub operations
-  - Exception: Local branches only - use `git checkout -b` instead of `mcp__github__create_branch`
+- **Use the `gh` CLI** for GitHub operations (PRs, issues, API)
 - **ALWAYS use Playwright MCP tools** (`mcp__playwright__*`) for browser testing
   - Test against: `http://localhost:3000` (frontend), `http://localhost:8001` (API)
 
@@ -85,3 +83,6 @@ npm install && npm run dev
 - Status: green/blue/yellow/red
 - Charts: Custom SVG, CSS Grid for layouts
 - No emojis in UI
+
+## Code Comments
+- Always document non-obvious logic changes with comments
