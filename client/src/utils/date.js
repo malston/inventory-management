@@ -2,7 +2,7 @@
 // displays as the previous day west of UTC. Parse them as local midnight instead.
 export function parseDate(dateString) {
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-    return new Date(`${dateString}T00:00:00`);
+    return new Date(`${dateString}T00:00:00`)
   }
-  return new Date(dateString);
+  return new Date(dateString)
 }
