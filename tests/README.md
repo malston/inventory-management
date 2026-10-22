@@ -170,3 +170,4 @@ To integrate with CI/CD pipelines:
 - Tests are independent and can run in any order
 - FastAPI TestClient handles app lifecycle automatically
 - Tests run in ~0.13 seconds
+
