@@ -5,19 +5,59 @@
       "id": 1,
       "prompt": "Replace the top navigation bar in this Vue app with a vertical sidebar on the left. Keep all the pages and links working.",
       "expected_output": "App.vue uses a left sidebar shell with all six router-links and their t() labels preserved, filters/language/profile moved to a top bar, global styles tokenized, views untouched, build passes.",
-      "files": []
+      "files": [],
+      "assertions": [
+        "Root layout has a sidebar element",
+        "All six nav routes still linked",
+        "All nav i18n labels preserved",
+        "Header components kept with their event bindings",
+        "View edits limited to added CSS in <style>",
+        "package.json unchanged",
+        "Design tokens defined as CSS custom properties on :root",
+        "Responsive rule collapses the sidebar at narrow widths",
+        "No emoji added to changed files",
+        "Client build succeeds",
+        "No horizontal page scroll at phone width"
+      ]
     },
     {
       "id": 2,
       "prompt": "our inventory dashboard looks kind of dated, can you make it look like a modern SaaS product? the spacing feels all over the place too",
       "expected_output": "Same sidebar shell result even though 'sidebar' was never mentioned; a single spacing scale applied in the global styles; views untouched; build passes.",
-      "files": []
+      "files": [],
+      "assertions": [
+        "Root layout has a sidebar element",
+        "All six nav routes still linked",
+        "All nav i18n labels preserved",
+        "Header components kept with their event bindings",
+        "View edits limited to added CSS in <style>",
+        "package.json unchanged",
+        "Design tokens defined as CSS custom properties on :root",
+        "Responsive rule collapses the sidebar at narrow widths",
+        "No emoji added to changed files",
+        "Client build succeeds",
+        "No horizontal page scroll at phone width"
+      ]
     },
     {
       "id": 3,
       "prompt": "Give the frontend a polished, professional SaaS layout with the nav down the left side. Keep our existing slate color scheme and the no-emoji rule from CLAUDE.md.",
       "expected_output": "Sidebar shell built on tokens that reuse the project's slate values (#0f172a, #64748b, #e2e8f0) rather than the skill's fallback palette; no emoji added; views untouched; build passes.",
-      "files": []
+      "files": [],
+      "assertions": [
+        "Root layout has a sidebar element",
+        "All six nav routes still linked",
+        "All nav i18n labels preserved",
+        "Header components kept with their event bindings",
+        "View edits limited to added CSS in <style>",
+        "package.json unchanged",
+        "Design tokens defined as CSS custom properties on :root",
+        "Responsive rule collapses the sidebar at narrow widths",
+        "No emoji added to changed files",
+        "Client build succeeds",
+        "No horizontal page scroll at phone width",
+        "Project slate colors reused in App.vue"
+      ]
     }
   ]
 }
