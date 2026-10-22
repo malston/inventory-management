@@ -121,6 +121,7 @@
 <script>
 import { ref, computed } from 'vue'
 import { useI18n } from '../composables/useI18n'
+import { parseDate } from '../utils/date'
 
 export default {
   name: 'TasksModal',
@@ -168,7 +169,7 @@ export default {
     }
 
     const formatDueDate = (dateString) => {
-      const date = new Date(dateString)
+      const date = parseDate(dateString)
       const today = new Date()
       today.setHours(0, 0, 0, 0)
       const dueDate = new Date(date)
@@ -198,7 +199,7 @@ export default {
 
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-      const due = new Date(dueDate)
+      const due = parseDate(dueDate)
       due.setHours(0, 0, 0, 0)
 
       const diffTime = due - today
